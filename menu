@@ -1,0 +1,195 @@
+#!/bin/bash
+# Bash Menu Script Example
+# create repository
+mkcd () {
+echo "Enter name of dir":
+read dirName
+mkdir -p $dirName
+
+if [ -d "$dirName" ]; then
+  echo "SUCCESS: Repository created"
+fi
+
+}
+
+#delete repository
+delete()
+{
+for d in *; do #show list of directories
+
+  echo $d
+done
+    echo "Enter name of dir":
+            read dirName
+            rm -r $dirName
+
+if [ ! -d "$dirName" ]; then
+  echo "SUCCESS: Repository deleted"
+  echo 'date' 'whoami' "| Deleted directory">> $dirName.log
+fi
+}
+
+#open repository
+open()
+{
+
+for d in */; do #show list of directories
+
+    echo $d
+done
+echo "Enter name of repository to be opened":
+read dirName
+cd $dirName
+    menuInternal
+}
+
+menuInternal(){    #lets user open a file and edit it
+    echo "Enter name of file to be opened"
+
+    ls -als
+
+    read fileName
+
+    #use mkdir as a lock before accessing the file
+    if mkdir $fileName.lock
+    then
+      echo >&2 "successfully acquired lock: $fileName.lock"
+    cp $fileName $fileName.new #create a copy of the file
+
+    nano $fileName
+
+    diff -u $fileName.new $fileName  > $fileName.patch
+    echo 'date' 'whoami' "| Opened, edited file">> $fileName.log
+    #unlock the file afterwards
+    rm -r $fileName.lock
+
+    else    # failed to create the directory, presumably because it already exists
+      echo >&2 "cannot acquire lock, giving up on $fileName.lock"
+    fi
+}
+
+#let user run their scripts
+execute()
+{
+  #choose directory
+  for d in */; do #show list of directories
+
+    echo $d
+  done
+  echo "Enter name of repository to be opened":
+    read dirName
+    cd $dirName
+  for d in *; do #show list of files
+      echo $d
+  done
+  echo "Enter name of file":
+    read fileName
+
+    #run script
+    ./$fileName
+    cd ..
+}
+#undo changes
+undo()
+{
+  #choose directory
+  for d in */; do #show list of directories
+
+      echo $d
+  done
+  echo "Enter name of repository to be opened":
+  read dirName
+  cd $dirName
+
+  for d in *; do #show list of files
+
+    echo $d
+  done
+  echo "Enter name of file":
+      read fileName
+      patch -R < $fileName.patch
+      echo 'date' 'whoami' "| Undo changes">> $fileName.log
+      cd ..
+}
+#archive directory
+archive()
+{
+  for d in */; do #show list of directories
+
+    echo $d
+  done
+  echo "Enter name of dir":
+      read dirName
+      tar -zcvf $dirName.tar.gz $dirName
+
+if [ -d "$dirName.tar.gz" ]; then
+  echo "SUCCESS: Repository archived"
+  echo 'date' 'whoami' "| Archived directory">> $dirName.log
+fi
+}
+#dearchive directory
+dearchive()
+{
+  for d in *.tar.gz; do #show list of archived directories
+    echo $d
+  done
+  echo "Enter name of dir":
+    read dirName
+    tar -zxvf $dirName
+
+if [ ! -d "$dirName" ]; then
+  echo "SUCCESS: Repository dearchived"
+  echo 'date' 'whoami' "| Dearchived directory">> $dirName.log
+fi
+}
+#menu 
+all_done=0
+while (( !all_done ))
+do
+  PS3='Please enter your choice: '
+  options=("Create a repository" "Delete a repository" "Open a repository" "Execute script" "Undo changes" "Archive a repository" "De-archive a reposity" "Quit")
+  select opt in "${options[@]}"
+  do
+      case $REPLY in
+          1)
+              mkcd
+              break
+              ;;
+          2)
+              delete
+              break
+              ;;
+          3)
+              open
+              cd ..
+              break
+              ;;
+          4)
+              execute
+              cd ..
+              break
+              ;;
+          5)
+              undo
+              break
+              ;;
+          6)
+              archive
+              break
+              ;;
+          7)
+              dearchive
+              break
+              ;;
+          8)
+              echo "exiting program"
+              all_done=1
+              break
+              ;;
+          *)
+              echo "Choose from options 1-7"
+              break
+              ;;
+      esac
+  done
+done
